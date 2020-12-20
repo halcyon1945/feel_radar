@@ -1,16 +1,36 @@
 import cv2
 import numpy as np
+import time
+import numpy
+a_temp=int(0)
 
-# 画像ではなくまっさらな下地となる200x300の黒い画像を生成
-# zerosの引数がheightが先になるので注意
-height = 1920
-width = 1080
+height = 1080
+width = 1920
 img = np.zeros((height, width, 3), np.uint8)
 
+print("OpenCV: " + cv2.__version__)
+print("NumPy: " + numpy.__version__)
 
-# 線を引く（線を引く画像、座標、線の色、線の太さをパラメータに指定）
-# 細めの赤線
-img = cv2.line(img,(0,0),(width,height),(0,0, 255),1)
-# 太めの青線
-img = cv2.line(img,(width,0),(0,height),(255,0, 0),5)
-cv2.imwrite("line.jpg", img)
+
+cv2.putText(img, "1", (10,30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), thickness=2)
+cv2.putText(img, "2", (10,height-30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), thickness=2)
+cv2.putText(img, "3", (width-30,30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 0, 0), thickness=2)
+cv2.putText(img, "4", (width-30,height-30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), thickness=2)
+
+cv2.namedWindow("dsp", cv2.WINDOW_NORMAL)
+cv2.setWindowProperty("dsp", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+cv2.imshow("dsp", img)
+print("show")
+
+while 1:
+    a_temp +=1
+    img = np.zeros((height, width, 3), np.uint8)
+    cv2.putText(img, "1", (10,30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), thickness=2)
+    cv2.putText(img, "2", (10,height-30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), thickness=2)
+    cv2.putText(img, "3", (width-30,30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 0, 0), thickness=2)
+    cv2.putText(img, "4", (width-30,height-30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), thickness=2)
+    cv2.putText(img, str(int(a_temp))  , (int(width/2),int(height/2)), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), thickness=2)
+    cv2.imshow("dsp", img)
+    k=cv2.waitKey(100)
+    if k == 27:         # wait for ESC key to exit
+        cv2.destroyAllWindows()
