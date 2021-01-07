@@ -27,7 +27,7 @@ def main():
     global graph_dist 
     global distance
     while 1:
-        plt.plot(np.arange(0., 10.1, 0.1),graph_dist)  
+        plt.plot(np.arange(0., 10.1, 0.1),graph_dist ,linewidth=2,color='red')  
         plt.title("Distance[mm]")
         plt.xlabel("time[s]")
         plt.ylabel("Distance[mm]")
