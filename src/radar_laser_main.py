@@ -4,8 +4,12 @@ import time
 import numpy as np
 import ctypes
 import matplotlib.pyplot as plt
+import threading
 
-# Define point structure
+
+# global variable
+graph_dist=[0]*101
+distance = 0
 
 
 class HeliosPoint(ctypes.Structure):
@@ -19,40 +23,62 @@ class HeliosPoint(ctypes.Structure):
 
 
 def main():
+    #draw task 100ms
+    global graph_dist 
+    global distance
+    while 1:
+        plt.plot(np.arange(0., 10.1, 0.1),graph_dist)  
+        plt.title("Distance[mm]")
+        plt.xlabel("time[s]")
+        plt.ylabel("Distance[mm]")
+        plt.xlim((0.0, 10.1))
+        plt.ylim((0.0, 11000))
+        plt.draw()  
+        plt.pause(0.1)  
+        plt.cla() 
+        
+def thread_distance_array():
+    #100ms task
+    global graph_dist 
+    global distance
+    while 1:
+        for num in range(1, 101):
+            graph_dist[num-1] = graph_dist[num]
+        graph_dist[100] = distance
+        time.sleep(0.1)
+
+def thread_radar_read():
+    # no wait
+    global distance
+    distance_prev = distance
     ser = serial.Serial('/dev/serial0', 57600, bytesize=serial.EIGHTBITS,
                         parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, timeout=1.0)
     buf = ['0', '0', '0', '0', '0']
-    distance = 0
-    graph_dist=[0]*101
-
-    # Load and initialize library
-    HeliosLib = ctypes.cdll.LoadLibrary("./libHeliosDacAPI.so")
-    numDevices = HeliosLib.OpenDevices()
-    print("Found ", numDevices, "Helios DACs")
-
     while True:
         for num in range(4, 0, -1):
             buf[num] = buf[num - 1]
         buf[0] = ser.read()
         if buf[4] == b'\xff' and buf[3] == b'\xff' and buf[2] == b'\xff':
-            distance_prev = distance
             distance = (int.from_bytes(buf[1], 'little') * 256 + int.from_bytes(buf[0], 'little')) * 10
-            #print(time.strftime("%a %b %d %H:%M:%S %Y", time.strptime(time.ctime())),int.from_bytes(buf[1],'little'),int.from_bytes(buf[0],'little'),distance, "\n")
             if round(distance / 100) != round(distance_prev / 100):
                 print(time.strftime("%a %b %d %H:%M:%S %Y :", time.strptime(time.ctime())), distance, " mm")
-                show_l(distance, numDevices, HeliosLib)
-            for num in range(1, 101):
-                graph_dist[num-1] = graph_dist[num]
-            graph_dist[100] = distance
-            plt.cla() 
-            plt.plot(graph_dist)  
-            plt.draw()  
-            plt.pause(0.00001)  
+            distance_prev = distance
     ser.close()
+
+
+def thread_ls_draw():
+    #300ms task
+    global distance
+    # Load and initialize library
+    HeliosLib = ctypes.cdll.LoadLibrary("./libHeliosDacAPI.so")
+    numDevices = HeliosLib.OpenDevices()
+    print("Found ", numDevices, "Helios DACs")
+    while True:
+        show_ls(distance, numDevices, HeliosLib)
+        time.sleep(0.3)
     HeliosLib.CloseDevices()
 
-
-def show_l(dist_y, numDevices, HeliosLib):
+def show_ls(dist_y, numDevices, HeliosLib):
     # actual lenth per laser base lines
     act_y = np.array([300, 301, 303, 1200, 9000])
     las_y = np.array([0, 1023.75, 1023.75 * 2, 1023.75 * 3, 1023.75 * 4])
@@ -81,6 +107,14 @@ def show_l(dist_y, numDevices, HeliosLib):
 
     return
 
-
 if __name__ == "__main__":
+    t1 = threading.Thread(target=thread_radar_read)
+    t2 = threading.Thread(target=thread_ls_draw)
+    t3 = threading.Thread(target=thread_distance_array)
+    
+    # スレッドスタート
+    t1.start()
+    t2.start()
+    t3.start()
+    print('thread started')
     main()
