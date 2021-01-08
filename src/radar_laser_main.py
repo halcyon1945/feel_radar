@@ -34,7 +34,7 @@ def main():
         plt.xlim((0.0, 10.1))
         plt.ylim((0.0, 11000))
         plt.draw()  
-        plt.pause(0.1)  
+        plt.pause(0.05)  
         plt.cla() 
         
 def thread_distance_array():
@@ -63,6 +63,7 @@ def thread_radar_read():
             if round(distance / 100) != round(distance_prev / 100):
                 print(time.strftime("%a %b %d %H:%M:%S %Y :", time.strptime(time.ctime())), distance, " mm")
             distance_prev = distance
+        time.sleep(0.001)
     ser.close()
 
 
@@ -75,7 +76,7 @@ def thread_ls_draw():
     print("Found ", numDevices, "Helios DACs")
     while True:
         show_ls(distance, numDevices, HeliosLib)
-        time.sleep(0.3)
+        time.sleep(0.5)
     HeliosLib.CloseDevices()
 
 def show_ls(dist_y, numDevices, HeliosLib):
