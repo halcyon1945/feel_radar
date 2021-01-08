@@ -26,16 +26,26 @@ def main():
     #draw task 100ms
     global graph_dist 
     global distance
+    fig, ax = plt.subplots()
+    line, = ax.plot(np.arange(0., 10.1, 0.1),graph_dist ,linewidth=2,color='red')
+    plt.title("Distance[mm]")
+    plt.xlabel("time[s]")
+    plt.ylabel("Distance[mm]")
+    plt.xlim((0.0, 10.1))
+    plt.ylim((0.0, 11000))
+    fig.canvas.draw()
+    fig.show()
+    
     while 1:
-        plt.plot(np.arange(0., 10.1, 0.1),graph_dist ,linewidth=2,color='red')  
-        plt.title("Distance[mm]")
-        plt.xlabel("time[s]")
-        plt.ylabel("Distance[mm]")
-        plt.xlim((0.0, 10.1))
-        plt.ylim((0.0, 11000))
-        plt.draw()  
-        plt.pause(0.05)  
-        plt.cla() 
+        line.set_ydata(graph_dist)
+        ax.draw_artist(ax.patch)
+        ax.draw_artist(line)
+
+        fig.canvas.blit(ax.bbox)
+        fig.canvas.flush_events()    
+        time.sleep(0.1)  
+        
+        
         
 def thread_distance_array():
     #100ms task
@@ -90,21 +100,23 @@ def show_ls(dist_y, numDevices, HeliosLib):
     scr_y = -1
 
     if dist_y < act_y[0] or dist_y > act_y[-1]:
-        scr_y = -1
+        frames[0] = frameType()
+        for i in range(80):
+            frames[0][i] = HeliosPoint(int(inc100 * i + inc100 * 20), int(0), 0x0, 0x00, 0x0, 0x00)
+
     else:
         scr_y = round(np.interp(dist_y, act_y, las_y))
         # print(dist_y,scr_y)
-
         frames[0] = frameType()
         for i in range(80):
             frames[0][i] = HeliosPoint(int(inc100 * i + inc100 * 20), int(scr_y), 0x0, 0xFF, 0x0, 0xFF)
 
-        for j in range(numDevices):
-            statusAttempts = 0
-            # Make 512 attempts for DAC status to be ready. After that, just give up and try to write the frame anyway
-            while (statusAttempts < 512 and HeliosLib.GetStatus(j) != 1):
-                statusAttempts += 1
-            HeliosLib.WriteFrame(j, int(30000), 1, ctypes.pointer(frames[0]), 80)  # Send the frame
+    for j in range(numDevices):
+        statusAttempts = 0
+        # Make 512 attempts for DAC status to be ready. After that, just give up and try to write the frame anyway
+        while (statusAttempts < 512 and HeliosLib.GetStatus(j) != 1):
+            statusAttempts += 1
+        HeliosLib.WriteFrame(j, int(30000), 1, ctypes.pointer(frames[0]), 80)  # Send the frame
 
     return
 
