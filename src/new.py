@@ -7,7 +7,7 @@ import threading
 import time
 assy=[0]
 axis_x=[0]
-CHUNK = 20000
+CHUNK = 44100
 RATE = 44100 # サンプリング周波数
 
 
@@ -16,13 +16,13 @@ def main():
     fig, ax = plt.subplots()
 
     time.sleep(3)  
-    axis_x = np.linspace(0,int(RATE/2),int(CHUNK/2))
+    axis_x = np.linspace(0.0, 1/RATE,CHUNK*10)
     line, = ax.plot(axis_x,rms,linewidth=2,color='red')
     plt.title("RMS[]")
     plt.xlabel("Tempo[Hz]")
     plt.ylabel("abs[]")
-    plt.xlim((0.0, 1000))
-    plt.ylim((-1, 100))
+    #plt.xlim((0.0, CHUNK*10))
+    #plt.ylim((-100, 100))
     fig.canvas.draw()
     fig.show() 
     while 1:
@@ -43,7 +43,7 @@ def main():
 
 def listen():
     global rms,axis_x
-    rms=[]
+    rms=[0]*CHUNK*10
     P = pyaudio.PyAudio()
     FLAG=0
     stream = P.open(format=pyaudio.paInt16, channels=1, rate=RATE, frames_per_buffer=CHUNK, input=True, output=False)
@@ -59,21 +59,9 @@ def listen():
             #assy = [np.asscalar(i) for i in ndarray]
             #assy = f
 
-            xF = np.fft.fft(ndarray)
-            N = len(xF)
-            xF = xF[0:int(N/2)]
-            axis_x = np.linspace(0,int(RATE/2),int(N/2))
-            xF = 20*np.log10(abs(xF))
-            
-            
-            if FLAG == 0:
-                ndarray_base = xF
-                FLAG=1
-            elif FLAG == 1:
-                ndarray_base = (ndarray_base +xF)/2
-                FLAG=2
-
-            rms=xF-ndarray_base
+            for index in range(0,CHUNK*9):
+                rms[index]=rms[index+CHUNK]
+            rms[CHUNK*9:CHUNK*10] = ndarray
 
             
             ''' 音声を出力する場合はstreamのoutputをTrueにして下2行を追加する '''
