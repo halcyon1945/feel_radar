@@ -8,21 +8,22 @@ import math
 import ctypes
 
 # Tune-setting
-input_interval = 1/10  # sec
-draw_length = 1.0  # sec
+input_interval = 1/20  # sec
+draw_length = 0.5  # sec
 audio_sampling_rate = 44100  # Hz
 max_draw_points = 4096  # limited by ILDA
+draw_points = 1000
 
 # pre-calc
 # buffer size for one time
 CHUNK = math.ceil(audio_sampling_rate * input_interval)
 draw_cycle = math.ceil(draw_length / input_interval)  # ten times for disp
-draw_cycle_window = math.ceil(max_draw_points / draw_cycle) # 409 points for each window
+draw_cycle_window = math.ceil(draw_points / draw_cycle) # 409 points for each window
 local_resampling_window = math.ceil(CHUNK / draw_cycle_window)
 
 # init global val
-draw_axis_x_for_matplot = [0]*max_draw_points
-draw_y_value = [0]*4096
+draw_axis_x_for_matplot = [0]*draw_points
+draw_y_value = [max_draw_points/2]*draw_points
 input_raw_y_value = [0]*CHUNK*draw_cycle
 
 # this func has two thread and 1 main .
@@ -46,13 +47,13 @@ def main():
     global draw_axis_x_for_matplot
     fig, ax = plt.subplots()
     time.sleep(3)
-    draw_axis_x_for_matplot = np.linspace(0.0,draw_length, max_draw_points )
+    draw_axis_x_for_matplot = np.linspace(0.0,draw_length, draw_points )
     line, = ax.plot(draw_axis_x_for_matplot, draw_y_value, linewidth=2, color='red')
     plt.title("audio wave draw")
     plt.xlabel("time[sec]")
     plt.ylabel("volume[abs level]")
     # plt.xlim((0.0, CHUNK*10))
-    plt.ylim((-32767, 32767))
+    plt.ylim((0, max_draw_points))
     fig.canvas.draw()
     fig.show()
 
@@ -96,7 +97,7 @@ def listen():
                     frames_per_buffer=CHUNK, input=True, output=False,stream_callback=listen_callback)
     while stream.is_active():
         try:
-            time.sleep(0.1)
+            time.sleep(0.01)
         except KeyboardInterrupt:
             stream.stop_stream()
             stream.close()
@@ -120,12 +121,12 @@ def thread_ls_draw():
                 local_resample_buf=local_resample_buf + input_raw_y_value[num]
                 if num % local_resampling_window == local_resampling_window-1:
                     # calc average
-                    draw_y_value[index]=math.ceil(local_resample_buf / local_resampling_window)
+                    draw_y_value[index]=math.ceil((local_resample_buf / local_resampling_window)/(32767/max_draw_points) + max_draw_points/2)
                     index += 1
                     local_resample_buf=0
             
-            #show_ls(draw_y_value, numDevices, HeliosLib)
-            #time.sleep(0.05)
+            show_ls(draw_y_value, numDevices, HeliosLib)
+            #time.sleep(0.01)
         except KeyboardInterrupt:
             HeliosLib.CloseDevices()
             break
@@ -136,16 +137,20 @@ def show_ls(input_y, numDevices, HeliosLib):
     frames=[0 for x in range(1)]
     frameType=HeliosPoint * max_draw_points
     frames[0]=frameType()
-    for i in range(max_draw_points):
-        frames[0][i]=HeliosPoint(int(i), int(input_y[i]), 0x0, 0xFF, 0x0, 0xFF)
+    #left to right
+    for i in range(len(input_y)):
+        frames[0][i]=HeliosPoint( int(math.ceil(i*max_draw_points/draw_points)), int(input_y[i]), 0x0, 0xFF, 0x0, 0xFF)
+    #right to left (end meets start(origin) point = suppress jittar)          
+    for i in range(len(input_y)):
+        frames[0][draw_points + i]=HeliosPoint(int(math.ceil(max_draw_points - i*max_draw_points/draw_points)), int(input_y[int(draw_points)-i-1]), 0x0, 0xFF, 0x0, 0xFF)
 
     for j in range(numDevices):
         statusAttempts=0
         # Make 512 attempts for DAC status to be ready. After that, just give up and try to write the frame anyway
         while (statusAttempts < 512 and HeliosLib.GetStatus(j) != 1):
             statusAttempts += 1
-        HeliosLib.WriteFrame(j, int(30000), 1, ctypes.pointer(
-            frames[0]), max_draw_points)  # Send the frame
+        HeliosLib.WriteFrame(j, int(40000), 0, ctypes.pointer(
+            frames[0]), draw_points*2)  # Send the frame
 
     return
 
