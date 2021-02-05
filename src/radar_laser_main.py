@@ -28,11 +28,12 @@ def main():
     global distance
     fig, ax = plt.subplots()
     line, = ax.plot(np.arange(0., 10.1, 0.1),graph_dist ,linewidth=2,color='red')
-    plt.title("Distance[mm]")
-    plt.xlabel("time[s]")
-    plt.ylabel("Distance[mm]")
+    plt.title("Radar Detect Distance[m]", fontsize=22)
+    plt.xlabel("time[s]", fontsize=22)
+    plt.ylabel("Distance[m]", fontsize=22)
     plt.xlim((0.0, 10.1))
-    plt.ylim((0.0, 11000))
+    plt.ylim((0.0, 11))
+    plt.tick_params(labelsize=20)
     fig.canvas.draw()
     fig.show()
     
@@ -54,7 +55,7 @@ def thread_distance_array():
     while 1:
         for num in range(1, 101):
             graph_dist[num-1] = graph_dist[num]
-        graph_dist[100] = distance
+        graph_dist[100] = distance/1000
         time.sleep(0.1)
 
 def thread_radar_read():
@@ -70,8 +71,8 @@ def thread_radar_read():
         buf[0] = ser.read()
         if buf[4] == b'\xff' and buf[3] == b'\xff' and buf[2] == b'\xff':
             distance = (int.from_bytes(buf[1], 'little') * 256 + int.from_bytes(buf[0], 'little')) * 10
-            if round(distance / 100) != round(distance_prev / 100):
-                print(time.strftime("%a %b %d %H:%M:%S %Y :", time.strptime(time.ctime())), distance, " mm")
+            #if round(distance / 100) != round(distance_prev / 100):
+            #    print(time.strftime("%a %b %d %H:%M:%S %Y :", time.strptime(time.ctime())), distance, " mm")
             distance_prev = distance
         time.sleep(0.001)
     ser.close()
